@@ -1,0 +1,91 @@
+version: '3'
+services:
+    nginx:
+        image: nginx
+        container_name: project-nginx
+        ports:
+            - "8080:80"
+        volumes:
+            - ./project:/app
+            - ./project/docker/nginx/conf.d:/etc/nginx/conf.d
+            - ./project/docker/nginx/logs:/var/log/nginx/
+        depends_on:
+            - project-php-fpm
+    project-php-fpm:
+        build:
+            context: project/docker
+            dockerfile: php-fpm.Dockerfile
+            args:
+                DOCKER_PHP_VERSION: "8.2"
+        container_name: project-php-fpm
+        volumes:
+            - ./project:/app
+        depends_on:
+            - project-postgres
+            - project-redis
+            - project-queue-redis
+        extra_hosts:
+            - "demo.loc:127.0.0.1"
+    project-php-cli:
+        build:
+            context: project/docker
+            dockerfile: php-cli.Dockerfile
+            args:
+                DOCKER_PHP_VERSION: "8.2"
+        container_name: project-php-cli
+        volumes:
+            - ./project:/app
+            - composer:/root/.composer/cache
+        depends_on:
+            - project-postgres
+            - project-redis
+            - project-queue-redis
+        command: sh -c "until [ -f .ready ] ; do sleep 1 ; done && php bin/console messenger:consume async -vv"
+    project-queue-worker:
+        build:
+            context: project/docker
+            dockerfile: php-cli.Dockerfile
+            args:
+                DOCKER_PHP_VERSION: "8.2"
+        container_name: project-queue-worker
+        volumes:
+            - ./project:/app
+            - composer:/root/.composer/cache
+        depends_on:
+            - project-postgres
+            - project-redis
+            - project-queue-redis
+        command: sh -c "until [ -f .ready ] ; do sleep 1 ; done && php bin/console messenger:consume async -vv"
+    project-postgres:
+        image: postgres:11.2-alpine
+        container_name: project-postgres
+        volumes:
+            - project-postgres:/var/lib/postgresql/data
+        environment:
+            POSTGRES_USER: app
+            POSTGRES_PASSWORD: secret
+            POSTGRES_DB: app
+        ports:
+            - "54321:5432"
+    project-redis:
+        image: redis:5.0-alpine
+        container_name: project-redis
+        volumes:
+            - project-redis:/data
+        command:
+            - 'redis-server'
+            - '--databases 2'
+            - '--save 900 1'
+            - '--save 300 10'
+            - '--save 60 10000'
+            - '--requirepass secret'
+    project-queue-redis:
+        image: redis:5.0-alpine
+        container_name: project-queue-redis
+        volumes:
+            - project-queue-redis:/data
+volumes:
+    project-postgres:
+    project-redis:
+    project-queue-redis:
+    composer:

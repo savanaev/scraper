@@ -1,0 +1,1 @@
+* * * * * root /usr/local/bin/php /app/bin/console app:collect-colleges; echo "Cron job is running" >> /var/log/cron.log 2>&1
