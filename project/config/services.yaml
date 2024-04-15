@@ -22,41 +22,103 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+    Symfony\Component\DomCrawler\Crawler: ~
 
-    App\Colleges\Infrastructure\Persistence\Repository\CollegeListRepository:
-        arguments: [ '@doctrine' ]
+    Symfony\Component\HttpKernel\HttpCache\Store:
+        arguments:
+            $root: '%kernel.cache_dir%/http_cache'
 
-    App\Colleges\Infrastructure\Persistence\Service\CollegeListScraperService:
+    Symfony\Component\HttpClient\CachingHttpClient:
         arguments:
-            $httpClient: '@Symfony\Contracts\HttpClient\HttpClientInterface'
-    App\Colleges\Infrastructure\Persistence\Service\CollegeDetailsScraperService:
-        arguments:
-            $httpClient: '@Symfony\Contracts\HttpClient\HttpClientInterface'
+            $client: '@Symfony\Contracts\HttpClient\HttpClientInterface'
+            $store: '@Symfony\Component\HttpKernel\HttpCache\Store'
 
-    App\Colleges\Infrastructure\Persistence\Service\CollegeListPersistenceService:
+    Predis\Client:
         arguments:
-            $hashGenerator: '@App\Colleges\Infrastructure\Persistence\Service\HashGenerator'
-            $collegeListRepository: '@App\Colleges\Infrastructure\Persistence\Repository\CollegeListRepository'
-    App\Colleges\Infrastructure\Persistence\Service\CollegeDetailsPersistenceService:
-        arguments:
-            $collegeDetailsRepository: '@App\Colleges\Infrastructure\Persistence\Repository\CollegeDetailsRepository'
 
-    App\Colleges\Infrastructure\Console\CollectCollegesCommand:
+    Symfony\Component\Cache\Adapter\RedisAdapter:
         arguments:
-            $collegeListScraperService: '@App\Colleges\Infrastructure\Persistence\Service\CollegeListScraperService'
-            $collegeDetailsScraperService: '@App\Colleges\Infrastructure\Persistence\Service\CollegeDetailsScraperService'
-            $collegeListPersistenceService: '@App\Colleges\Infrastructure\Persistence\Service\CollegeListPersistenceService'
-            $hashGenerator: '@App\Colleges\Infrastructure\Persistence\Service\HashGenerator'
+            $redis: '@Predis\Client'
+            $defaultLifetime: '%env(CACHE_LIFETIME)%'
+
+
+    App\Command\CollectCollegesCommand:
+        arguments:
+            $scraperService: '@App\Service\ScraperService'
         tags:
             - { name: 'console.command', command: 'app:collect-colleges' }
-    App\Colleges\Infrastructure\Console\ClearCollegesCommand:
+
+    App\Command\ClearCollegesCommand:
         arguments:
-            $collegeListPersistenceService: '@App\Colleges\Infrastructure\Persistence\Service\CollegeListPersistenceService'
+            $collegeListService: '@App\Service\CollegeListService'
         tags:
             - { name: 'console.command', command: 'app:clear-colleges' }
-    App\Colleges\Infrastructure\Console\ShowCollegesCommand:
+
+    App\Service\ScraperService:
         arguments:
-            $collegeListPersistenceService: '@App\Colleges\Infrastructure\Persistence\Service\CollegeListPersistenceService'
-            $collegeDetailsPersistenceService: '@App\Colleges\Infrastructure\Persistence\Service\CollegeDetailsPersistenceService'
-        tags:
-            - { name: 'console.command', command: 'app:show-colleges' }
+            $scraper: '@App\Service\Scraper\Scraper'
+            $pagination: '@App\Service\Scraper\Page\CollegePagination'
+            $eventDispatcher: '@Symfony\Component\EventDispatcher\EventDispatcherInterface'
+            $collegeDetails: '@App\Service\Scraper\Page\College'
+            $collegeDetailsService: '@App\Service\CollegeDetailsService'
+
+    App\Service\CollegeListService:
+        public: true
+        arguments:
+            $collegeListRepository: '@App\Repository\CollegeListRepository'
+            $colleges: '@App\Service\Scraper\Page\Colleges'
+            $eventDispatcher: '@Symfony\Component\EventDispatcher\EventDispatcherInterface'
+
+    App\Service\CollegeDetailsService:
+        arguments:
+            $collegeDetailsRepository: '@App\Repository\CollegeDetailsRepository'
+
+    App\Service\CollegesStateService:
+        arguments:
+            $collegeListRepository: '@App\Repository\CollegeListRepository'
+            $cacheService: '@App\Service\Cache\CacheService'
+            $hashFactory: '@App\Service\Hash\Md5HashFactory'
+
+    App\Service\Scraper\Scraper:
+        arguments:
+            $scraper: '@App\Service\Scraper\Common\CachingHttpClientScraper'
+
+    App\Service\Cache\CacheService:
+        arguments:
+            $cache: '@scraper_pool'
+
+    App\Service\Hash\Md5HashFactory: ~
+
+    App\Service\Scraper\Page\CollegePagination:
+        arguments:
+            $httpClient: '@Symfony\Contracts\HttpClient\HttpClientInterface'
+            $crawler: '@Symfony\Component\DomCrawler\Crawler'
+
+    App\Service\Scraper\Page\College:
+        arguments:
+            $crawler: '@Symfony\Component\DomCrawler\Crawler'
+
+    App\Service\Scraper\Page\Colleges:
+        arguments:
+            $crawler: '@Symfony\Component\DomCrawler\Crawler'
+
+    App\Service\Scraper\Common\BaseScraper:
+        arguments:
+            $httpClient: '@Symfony\Contracts\HttpClient\HttpClientInterface'
+
+    App\Service\Scraper\Common\StreamResponsesScraper:
+        arguments:
+            $httpClient: '@Symfony\Contracts\HttpClient\HttpClientInterface'
+
+    App\Service\Scraper\Common\CachingHttpClientScraper:
+        arguments:
+            $httpClient: '@Symfony\Contracts\HttpClient\HttpClientInterface'
+            $store: '@Symfony\Component\HttpKernel\HttpCache\Store'
+
+    App\Event\CollegeListScrapedEvent:
+        arguments:
+            $contentList: ~
+
+    App\Event\CollegeDetailsScrapedEvent:
+        arguments:
+            $contentList: ~

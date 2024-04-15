@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y libpq-dev unzip cron \
 
 RUN pecl install xdebug && docker-php-ext-enable xdebug
 COPY ./php/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+COPY ./php/php.ini /usr/local/etc/php/conf.d/php.ini
 
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer --quiet
 

@@ -23,7 +23,7 @@ services:
         depends_on:
             - project-postgres
             - project-redis
-            - project-queue-redis
+            - project-rabbitmq
         extra_hosts:
             - "demo.loc:127.0.0.1"
     project-php-cli:
@@ -39,7 +39,7 @@ services:
         depends_on:
             - project-postgres
             - project-redis
-            - project-queue-redis
+            - project-rabbitmq
         command: sh -c "until [ -f .ready ] ; do sleep 1 ; done && php bin/console messenger:consume async -vv"
     project-queue-worker:
         build:
@@ -54,7 +54,7 @@ services:
         depends_on:
             - project-postgres
             - project-redis
-            - project-queue-redis
+            - project-rabbitmq
         command: sh -c "until [ -f .ready ] ; do sleep 1 ; done && php bin/console messenger:consume async -vv"
     project-postgres:
         image: postgres:11.2-alpine
@@ -66,26 +66,22 @@ services:
             POSTGRES_PASSWORD: secret
             POSTGRES_DB: app
         ports:
-            - "54321:5432"
+            - "5432:5432"
     project-redis:
         image: redis:5.0-alpine
         container_name: project-redis
         volumes:
             - project-redis:/data
-        command:
-            - 'redis-server'
-            - '--databases 2'
-            - '--save 900 1'
-            - '--save 300 10'
-            - '--save 60 10000'
-            - '--requirepass secret'
-    project-queue-redis:
-        image: redis:5.0-alpine
-        container_name: project-queue-redis
-        volumes:
-            - project-queue-redis:/data
+        ports:
+            - "6379:6379"
+    project-rabbitmq:
+        image: rabbitmq:3.8-alpine
+        container_name: project-rabbitmq
+        ports:
+            - "5672:5672" # порт для AMQP
+            - "15672:15672" # порт для управления RabbitMQ
 volumes:
     project-postgres:
     project-redis:
-    project-queue-redis:
+    project-rabbitmq:
     composer:

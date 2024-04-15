@@ -43,3 +43,21 @@
     make help
     ```
 
+5. Запустить скрапинг
+
+    ```bash
+    make collect-colleges
+    ```
+
+6. Удалить записи
+
+    ```bash
+    make clear-colleges
+    ```
+
+7. Посмотреть записи
+
+    ```bash
+    make show-colleges
+    ```
+   

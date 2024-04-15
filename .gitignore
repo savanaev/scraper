@@ -1,4 +1,4 @@
-
+/.idea
 ###> symfony/framework-bundle ###
 /project/.env.local
 /project/.env.local.php
@@ -15,5 +15,10 @@
 ###< symfony/phpunit-bridge ###
 
 ###> phpunit/phpunit ###
-/project/.phpunit.result.cache
+/project.phpunit.result.cache
 ###< phpunit/phpunit ###
+
+###> friendsofphp/php-cs-fixer ###
+/project/.php-cs-fixer.php
+/project/.php-cs-fixer.cache
+###< friendsofphp/php-cs-fixer ###

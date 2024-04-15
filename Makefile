@@ -22,6 +22,21 @@ build: ## Сборка образов
 project-init: ## Инициализация приложения
 	docker-compose run --rm project-php-cli composer install
 
+cs-fix: ## Запуск PHP Coding Standards Fixer  (/src, /tests)
+	docker-compose run --rm project-php-cli ./vendor/bin/php-cs-fixer fix src
+
+phpstan: ## Запуск PHPStan (/src, /tests)
+	docker-compose run --rm project-php-cli ./vendor/bin/phpstan analyse --level 5 src tests
+
+colleges-collect: ## Запустить скрапинг
+	docker-compose run --rm project-php-cli php bin/console app:collect-colleges
+
+clear-colleges: ## Удалить колледжи
+	docker-compose run --rm project-php-cli php bin/console app:clear-colleges
+
+show-colleges: ## Посмотреть колледжи
+	docker-compose run --rm project-php-cli php bin/console app:show-colleges
+
 cli: ## Запуск интерактивной оболочки PHP
 	docker-compose run --rm project-php-cli
 
